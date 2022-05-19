@@ -16,7 +16,7 @@ export type ContainerItem = {
 }
 
 const container1 = {
-    id: '1',
+    id: 'container-1',
     title: `Container: 1`,
     items: [
         { id: 'item-1', code: 'XY-12' } as ContainerItem,
@@ -24,7 +24,7 @@ const container1 = {
 } as Container
 
 const container2 = {
-    id: '2',
+    id: 'container-2',
     title: `Container: 2`,
     items: [
         { id: 'item-2', code: 'XY-12' } as ContainerItem,
@@ -33,7 +33,7 @@ const container2 = {
 } as Container
 
 const container3 = {
-    id: '3',
+    id: 'container-3',
     title: `Container: 3`,
     items: [
         { id: 'item-4', code: uuidv4() } as ContainerItem,
@@ -64,5 +64,6 @@ const hashObject: Items = containers.reduce((acc, current) => {
   acc[current.id] = current
   return acc
 }, {})
+
 
 export const hashedItems: Items = hashObject
