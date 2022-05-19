@@ -44,7 +44,6 @@ const animateLayoutChanges: AnimateLayoutChanges = (args) =>
 
 function DroppableContainer({
   children,
-  columns = 1,
   disabled,
   id,
   items,
@@ -92,7 +91,6 @@ function DroppableContainer({
         ...attributes,
         ...listeners,
       }}
-      columns={columns}
       {...props}
     >
       {children}
@@ -115,7 +113,6 @@ type Items = Record<string, string[]>;
 interface Props {
   adjustScale?: boolean;
   cancelDrop?: CancelDrop;
-  columns?: number;
   containerStyle?: React.CSSProperties;
   coordinateGetter?: KeyboardCoordinateGetter;
   getItemStyles?(args: {
@@ -148,7 +145,6 @@ export function MultipleContainers({
   adjustScale = false,
   itemCount = 3,
   cancelDrop,
-  columns,
   handle = false,
   items: initialItems,
   containerStyle,
@@ -460,11 +456,9 @@ export function MultipleContainers({
               key={containerId}
               id={containerId}
               label={minimal ? undefined : `Column ${containerId}`}
-              columns={columns}
               items={items[containerId]}
               scrollable={scrollable}
               style={containerStyle}
-              unstyled={minimal}
               onRemove={() => handleRemove(containerId)}
             >
               <SortableContext items={items[containerId]} strategy={strategy}>
@@ -542,12 +536,10 @@ export function MultipleContainers({
     return (
       <Container
         label={`Column ${containerId}`}
-        columns={columns}
         style={{
           height: '100%',
         }}
         shadow
-        unstyled={false}
       >
         {items[containerId].map((item, index) => (
           <Item
