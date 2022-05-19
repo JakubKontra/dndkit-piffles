@@ -36,6 +36,7 @@ import {CSS} from '@dnd-kit/utilities';
 import {coordinateGetter as multipleContainersCoordinateGetter} from './multipleContainersKeyboardCoordinates';
 
 import {Item, Container, ContainerProps} from './components';
+import { ContainerItem, Items } from 'data/data';
 
 const animateLayoutChanges: AnimateLayoutChanges = (args) =>
   args.isSorting || args.wasDragging ? defaultAnimateLayoutChanges(args) : true;
@@ -50,7 +51,7 @@ function DroppableContainer({
 }: ContainerProps & {
   disabled?: boolean;
   id: string;
-  items: string[];
+  items: ContainerItem[];
   style?: React.CSSProperties;
 }) {
   const {
@@ -106,8 +107,6 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-type Items = Record<string, string[]>;
-
 interface Props {
   adjustScale?: boolean;
   cancelDrop?: CancelDrop;
@@ -123,7 +122,7 @@ interface Props {
     isDragOverlay: boolean;
   }): React.CSSProperties;
   wrapperStyle?(args: {index: number}): React.CSSProperties;
-  items?: Items;
+  items: Items;
   handle?: boolean;
   renderItem?: any;
   strategy?: SortingStrategy;
@@ -156,7 +155,7 @@ export function MultipleContainers({
   vertical = false,
   scrollable,
 }: Props) {
-  const [items, setItems] = useState<Items>(() => initialItems ?? {});
+  const [items, setItems] = useState<Items>(() => initialItems);
   const [containers, setContainers] = useState(Object.keys(items));
   const [activeId, setActiveId] = useState<string | null>(null);
   const lastOverId = useRef<UniqueIdentifier | null>(null);
@@ -173,6 +172,8 @@ export function MultipleContainers({
    */
   const collisionDetectionStrategy: CollisionDetection = useCallback(
     (args) => {
+      
+      /// CONTAINERS
       if (activeId && activeId in items) {
         return closestCenter({
           ...args,
@@ -191,15 +192,18 @@ export function MultipleContainers({
           : rectIntersection(args);
       let overId = getFirstCollision(intersections, 'id');
 
+
+      // ITEMS
       if (overId != null) {
         if (overId === TRASH_ID) {
           // If the intersecting droppable is the trash, return early
           // Remove this if you're not using trashable functionality in your app
           return intersections;
         }
+        console.log("AAAA", overId)
 
         if (overId in items) {
-          const containerItems = items[overId];
+          const containerItems = items[overId].items;
 
           // If a container is matched and it contains items (columns 'A', 'B', 'C')
           if (containerItems.length > 0) {
@@ -219,6 +223,7 @@ export function MultipleContainers({
 
         return [{id: overId}];
       }
+      
 
       // When a draggable item moves to a new container, the layout may shift
       // and the `overId` may become `null`. We manually set the cached `lastOverId`
@@ -242,11 +247,25 @@ export function MultipleContainers({
     })
   );
   const findContainer = (id: string) => {
-    if (id in items) {
+    /**
+     if (id in items) {
       return id;
     }
-
+    
     return Object.keys(items).find((key) => items[key].includes(id));
+     */
+
+    if (id in items) {
+      return id
+    }
+
+    return Object.keys(items).find((key) => {
+      if (
+        items[key].items.findIndex((item) => item.id === id) !== -1
+      ) {
+        return key
+      }
+    })
   };
 
   const getIndex = (id: string) => {
@@ -256,10 +275,12 @@ export function MultipleContainers({
       return -1;
     }
 
-    const index = items[container].indexOf(id);
+    // const index = items[container].indexOf(id);
+    const index = items[container].items.findIndex((item) => item.id === id)
 
     return index;
   };
+  
 
   const onDragCancel = () => {
     if (clonedItems) {
@@ -278,6 +299,11 @@ export function MultipleContainers({
     });
   }, [items]);
 
+  useEffect(() => {
+    console.log("containers", containers)
+    console.log("items", items)
+  }, [items, containers])
+  
   return (
     <DndContext
       sensors={sensors}
@@ -305,6 +331,8 @@ export function MultipleContainers({
           return;
         }
 
+
+        // RIGHT COLUMN TO LEFT --- after new item in left column create new key / id
         if (activeContainer === FILTER_ID && overContainer !== FILTER_ID) {
           setItems((items) => {
             const activeItems = items[activeContainer];
@@ -348,8 +376,8 @@ export function MultipleContainers({
 
         if (activeContainer !== overContainer && activeContainer !== FILTER_ID && overContainer !== FILTER_ID) {
           setItems((items) => {
-            const activeItems = items[activeContainer];
-            const overItems = items[overContainer];
+            const activeItems = items[activeContainer].items;
+            const overItems = items[overContainer].items;
             const overIndex = overItems.indexOf(overId);
             const activeIndex = activeItems.indexOf(active.id);
 
@@ -374,15 +402,15 @@ export function MultipleContainers({
 
             return {
               ...items,
-              [activeContainer]: items[activeContainer].filter(
-                (item) => item !== active.id
+              [activeContainer]: items[activeContainer].items.filter(
+                (item) => item.id !== active.id
               ),
               [overContainer]: [
-                ...items[overContainer].slice(0, newIndex),
-                items[activeContainer][activeIndex],
-                ...items[overContainer].slice(
+                ...items[overContainer].items.slice(0, newIndex),
+                items[activeContainer].items[activeIndex],
+                ...items[overContainer].items.slice(
                   newIndex,
-                  items[overContainer].length
+                  items[overContainer].items.length
                 ),
               ],
             };
@@ -444,18 +472,23 @@ export function MultipleContainers({
         const overContainer = findContainer(overId);
 
         if (overContainer) {
-          const activeIndex = items[activeContainer].indexOf(active.id);
-          const overIndex = items[overContainer].indexOf(overId);
+          const activeIndex = items[activeContainer].items.indexOf(
+            active.id
+          )
+          const overIndex = items[overContainer].items.indexOf(overId)
 
           if (activeIndex !== overIndex) {
             setItems((items) => ({
               ...items,
-              [overContainer]: arrayMove(
-                items[overContainer],
-                activeIndex,
-                overIndex
-              ),
-            }));
+              [overContainer]: {
+                ...items[overContainer],
+                exercises: arrayMove(
+                  items[overContainer].items,
+                  activeIndex,
+                  overIndex
+                ),
+              },
+            }))
           }
         }
 
@@ -491,18 +524,23 @@ export function MultipleContainers({
                       key={containerId}
                       id={containerId}
                       label={minimal ? undefined : `Sequence ${containerId}`}
-                      items={items[containerId]}
+                      items={items[containerId].items}
                       scrollable={scrollable}
                       style={containerStyle}
                       onRemove={() => handleRemove(containerId)}
                     >
-                      <SortableContext items={items[containerId]} strategy={strategy}>
-                        {items[containerId].map((value, index) => {
+                      <SortableContext items={items[containerId].items.map((item) => {
+                        console.log(item)
+                        console.log(containerId)
+                        console.log(items[containerId].items)
+                        return item.id
+                      })} strategy={strategy}>
+                        {items[containerId].items.map((value, index) => {
                           return (
                             <SortableItem
                               disabled={isSortingContainer}
-                              key={value}
-                              id={value}
+                              key={value.id}
+                              id={value.id}
                               index={index}
                               handle={handle}
                               style={getItemStyles}
@@ -536,13 +574,13 @@ export function MultipleContainers({
               disabled={isSortingContainer}
               items={empty}
             >
-              <SortableContext items={items[FILTER_ID]} strategy={strategy}>
-                  {items[FILTER_ID].map((value, index) => {
+              <SortableContext items={items[FILTER_ID].items.map((item)=> item.id)} strategy={strategy}>
+                  {items[FILTER_ID].items.map((item, index) => {
                     return (
                       <SortableItem
                         disabled={isSortingContainer}
-                        key={`${value}-${index}`}
-                        id={value}
+                        key={`${item.id}-${index}`}
+                        id={item.id}
                         index={index}
                         handle={handle}
                         style={getItemStyles}
