@@ -337,57 +337,10 @@ export function MultipleContainers({
           return;
         }
 
-        // RIGHT COLUMN TO LEFT --- after new item in left column create new key / id
-        if (activeContainer === FILTER_ID && overContainer !== FILTER_ID) {
-          setItems((items) => {
-            const activeItems = items[activeContainer].items;
-            const overItems = items[overContainer].items;
-            const overIndex = overItems.findIndex((item) => item.id === overId);
-            const activeIndex = activeItems.findIndex((item) => item.id === active.id);
 
-            let newIndex: number;
-
-            if (overId in items) {
-              newIndex = overItems.length + 1;
-            } else {
-              const isBelowOverItem =
-                over &&
-                active.rect.current.translated &&
-                active.rect.current.translated.top >
-                  over.rect.top + over.rect.height;
-
-              const modifier = isBelowOverItem ? 1 : 0;
-
-              newIndex =
-                overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
-            }
-
-            recentlyMovedToNewContainer.current = true;
-
-            return {
-              ...items,
-              [activeContainer]: {
-                ...items[activeContainer],
-                items: [
-                  ...items[activeContainer].items
-                ]
-              },
-              [overContainer]: {
-                ...items[overContainer],
-                items: [
-                  ...items[overContainer].items.slice(0, newIndex),
-                  { ...items[activeContainer].items[activeIndex], id: uuidv4() },
-                  ...items[overContainer].items.slice(
-                    newIndex,
-                    items[overContainer].items.length
-                  ),
-                ]
-              },
-            };
-          });
-        }
-
-        if (activeContainer !== overContainer) {
+        console.log("activeContaineractiveContainer", activeContainer)
+        console.log("overContaineroverContainer", overContainer)
+        if (activeContainer !== overContainer && activeContainer === FILTER_ID) {
           setItems((items) => {
             const activeItems = items[activeContainer].items;
             const overItems = items[overContainer].items;
@@ -469,17 +422,6 @@ export function MultipleContainers({
           return;
         }
 
-        if (overId === TRASH_ID) {
-          setItems((items) => ({
-            ...items,
-            [activeContainer]: items[activeContainer].filter(
-              (id) => id !== activeId
-            ),
-          }));
-          setActiveId(null);
-          return;
-        }
-
         if (overId === PLACEHOLDER_ID) {
           const newContainerId = getNextContainerId();
 
@@ -515,6 +457,56 @@ export function MultipleContainers({
                 ),
               },
             }))
+          }
+        
+        // RIGHT COLUMN TO LEFT --- after new item in left column create new key / id
+          if (overContainer === FILTER_ID) {
+              setItems((items) => {
+              const activeItems = items[activeContainer].items;
+              const overItems = items[overContainer].items;
+              const overIndex = overItems.findIndex((item) => item.id === overId);
+              const activeIndex = activeItems.findIndex((item) => item.id === active.id);
+
+              let newIndex: number;
+
+              if (overId in items) {
+                newIndex = overItems.length + 1;
+              } else {
+                const isBelowOverItem =
+                  over &&
+                  active.rect.current.translated &&
+                  active.rect.current.translated.top >
+                    over.rect.top + over.rect.height;
+
+                const modifier = isBelowOverItem ? 1 : 0;
+
+                newIndex =
+                  overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
+              }
+
+              recentlyMovedToNewContainer.current = true;
+
+              return {
+                ...items,
+                [activeContainer]: {
+                  ...items[activeContainer],
+                  items: [
+                    ...items[activeContainer].items
+                  ]
+                },
+                [overContainer]: {
+                  ...items[overContainer],
+                  items: [
+                    ...items[overContainer].items.slice(0, newIndex),
+                    { ...items[activeContainer].items[activeIndex], id: uuidv4() },
+                    ...items[overContainer].items.slice(
+                      newIndex,
+                      items[overContainer].items.length
+                    ),
+                  ]
+                },
+              };
+            });
           }
         }
 
