@@ -420,7 +420,6 @@ export function MultipleContainers({
              */
               
 
-            if (activeContainer === FILTER_ID) {
               console.log("overContainer", overContainer)
               return {
                 ...items,
@@ -442,28 +441,6 @@ export function MultipleContainers({
                   ),]
                 },
               }; 
-            } else {
-              return {
-                ...items,
-                [activeContainer]: {
-                  ...items[activeContainer],
-                  items: [
-                    ...items[activeContainer].items.filter(
-                      (item) => item.id !== active.id
-                    )
-                  ]
-                },
-                [overContainer]: {
-                  ...items[overContainer],
-                  items: [...items[overContainer].items.slice(0, newIndex),
-                  items[activeContainer].items[activeIndex],
-                  ...items[overContainer].items.slice(
-                    newIndex,
-                    items[overContainer].items.length
-                  ),]
-                },
-              };
-            }
           });
         }
       }}
