@@ -47,6 +47,7 @@ const containers = [
 ]
 
 const hashObject: Items = containers.reduce((acc, current) => {
+  //@ts-ignore
   acc[current.id] = current
   return acc
 }, {})

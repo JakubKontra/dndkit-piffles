@@ -37,8 +37,6 @@ import {coordinateGetter as multipleContainersCoordinateGetter} from './multiple
 
 import {Item, Container, ContainerProps} from './components';
 
-import {createRange} from '../../utilities';
-
 const animateLayoutChanges: AnimateLayoutChanges = (args) =>
   args.isSorting || args.wasDragging ? defaultAnimateLayoutChanges(args) : true;
 
@@ -125,7 +123,6 @@ interface Props {
     isDragOverlay: boolean;
   }): React.CSSProperties;
   wrapperStyle?(args: {index: number}): React.CSSProperties;
-  itemCount?: number;
   items?: Items;
   handle?: boolean;
   renderItem?: any;
@@ -137,13 +134,13 @@ interface Props {
   vertical?: boolean;
 }
 
+const FILTER_ID = 'container_items';
 export const TRASH_ID = 'void';
 const PLACEHOLDER_ID = 'placeholder';
 const empty: UniqueIdentifier[] = [];
 
 export function MultipleContainers({
   adjustScale = false,
-  itemCount = 3,
   cancelDrop,
   handle = false,
   items: initialItems,
@@ -159,15 +156,7 @@ export function MultipleContainers({
   vertical = false,
   scrollable,
 }: Props) {
-  const [items, setItems] = useState<Items>(
-    () =>
-      initialItems ?? {
-        A: createRange(itemCount, (index) => `A${index + 1}`),
-        B: createRange(itemCount, (index) => `B${index + 1}`),
-        C: createRange(itemCount, (index) => `C${index + 1}`),
-        D: createRange(itemCount, (index) => `D${index + 1}`),
-      }
-  );
+  const [items, setItems] = useState<Items>(() => initialItems ?? {});
   const [containers, setContainers] = useState(Object.keys(items));
   const [activeId, setActiveId] = useState<string | null>(null);
   const lastOverId = useRef<UniqueIdentifier | null>(null);
@@ -316,7 +305,48 @@ export function MultipleContainers({
           return;
         }
 
-        if (activeContainer !== overContainer) {
+        if (activeContainer === FILTER_ID && overContainer !== FILTER_ID) {
+          setItems((items) => {
+            const activeItems = items[activeContainer];
+            const overItems = items[overContainer];
+            const overIndex = overItems.indexOf(overId);
+            const activeIndex = activeItems.indexOf(active.id);
+
+            let newIndex: number;
+
+            if (overId in items) {
+              newIndex = overItems.length + 1;
+            } else {
+              const isBelowOverItem =
+                over &&
+                active.rect.current.translated &&
+                active.rect.current.translated.top >
+                  over.rect.top + over.rect.height;
+
+              const modifier = isBelowOverItem ? 1 : 0;
+
+              newIndex =
+                overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
+            }
+
+            recentlyMovedToNewContainer.current = true;
+
+            return {
+              ...items,
+              [activeContainer]: items[activeContainer],
+              [overContainer]: [
+                ...items[overContainer].slice(0, newIndex),
+                items[activeContainer][activeIndex],
+                ...items[overContainer].slice(
+                  newIndex,
+                  items[overContainer].length
+                ),
+              ],
+            };
+          });
+        }
+
+        if (activeContainer !== overContainer && activeContainer !== FILTER_ID && overContainer !== FILTER_ID) {
           setItems((items) => {
             const activeItems = items[activeContainer];
             const overItems = items[overContainer];
@@ -437,62 +467,100 @@ export function MultipleContainers({
     >
       <div
         style={{
-          display: 'inline-grid',
+          display: 'flex',
           boxSizing: 'border-box',
           padding: 20,
-          gridAutoFlow: vertical ? 'row' : 'column',
         }}
       >
+        <div
+        >
         <SortableContext
-          items={[...containers, PLACEHOLDER_ID]}
+          items={[...containers, PLACEHOLDER_ID, FILTER_ID]}
           strategy={
             vertical
               ? verticalListSortingStrategy
               : horizontalListSortingStrategy
           }
         >
-          {containers.map((containerId) => (
-            <DroppableContainer
-              key={containerId}
-              id={containerId}
-              label={minimal ? undefined : `Column ${containerId}`}
-              items={items[containerId]}
-              scrollable={scrollable}
-              style={containerStyle}
-              onRemove={() => handleRemove(containerId)}
-            >
-              <SortableContext items={items[containerId]} strategy={strategy}>
-                {items[containerId].map((value, index) => {
+          <div style={{ display: 'flex'}}>
+            <div>
+              {containers.map((containerId) => {
+                if(containerId !== FILTER_ID) {
                   return (
-                    <SortableItem
-                      disabled={isSortingContainer}
-                      key={value}
-                      id={value}
-                      index={index}
-                      handle={handle}
-                      style={getItemStyles}
-                      wrapperStyle={wrapperStyle}
-                      renderItem={renderItem}
-                      containerId={containerId}
-                      getIndex={getIndex}
-                    />
-                  );
-                })}
-              </SortableContext>
-            </DroppableContainer>
-          ))}
-          {minimal ? undefined : (
+                    <DroppableContainer
+                      key={containerId}
+                      id={containerId}
+                      label={minimal ? undefined : `Sequence ${containerId}`}
+                      items={items[containerId]}
+                      scrollable={scrollable}
+                      style={containerStyle}
+                      onRemove={() => handleRemove(containerId)}
+                    >
+                      <SortableContext items={items[containerId]} strategy={strategy}>
+                        {items[containerId].map((value, index) => {
+                          return (
+                            <SortableItem
+                              disabled={isSortingContainer}
+                              key={value}
+                              id={value}
+                              index={index}
+                              handle={handle}
+                              style={getItemStyles}
+                              wrapperStyle={wrapperStyle}
+                              renderItem={renderItem}
+                              containerId={containerId}
+                              getIndex={getIndex}
+                            />
+                          );
+                        })}
+                      </SortableContext>
+                    </DroppableContainer>
+                  )
+                }
+              })}
+              {minimal ? undefined : (
+                <DroppableContainer
+                  id={PLACEHOLDER_ID}
+                  disabled={isSortingContainer}
+                  items={empty}
+                  onClick={handleAddColumn}
+                  placeholder
+                >
+                  + Add Sequence
+                </DroppableContainer>
+              )}
+            </div>
+            <div>
             <DroppableContainer
-              id={PLACEHOLDER_ID}
+              id={FILTER_ID}
               disabled={isSortingContainer}
               items={empty}
-              onClick={handleAddColumn}
-              placeholder
             >
-              + Add column
+              <SortableContext items={items[FILTER_ID]} strategy={strategy}>
+                  {items[FILTER_ID].map((value, index) => {
+                    return (
+                      <SortableItem
+                        disabled={isSortingContainer}
+                        key={`${value}-${index}`}
+                        id={value}
+                        index={index}
+                        handle={handle}
+                        style={getItemStyles}
+                        wrapperStyle={wrapperStyle}
+                        renderItem={renderItem}
+                        containerId={FILTER_ID}
+                        getIndex={getIndex}
+                      />
+                    );
+                  })}
+                </SortableContext>
             </DroppableContainer>
-          )}
+            </div>
+          </div>
+          
+         
         </SortableContext>
+        </div>
       </div>
         {typeof window === 'object' ??createPortal(
         <DragOverlay adjustScale={adjustScale} dropAnimation={dropAnimation}>
@@ -524,7 +592,6 @@ export function MultipleContainers({
           isDragging: true,
           isDragOverlay: true,
         })}
-        color={getColor(id)}
         wrapperStyle={wrapperStyle({index: 0})}
         renderItem={renderItem}
         dragOverlay
@@ -535,7 +602,7 @@ export function MultipleContainers({
   function renderContainerDragOverlay(containerId: string) {
     return (
       <Container
-        label={`Column ${containerId}`}
+        label={`Sequence: ${containerId}`}
         style={{
           height: '100%',
         }}
@@ -555,7 +622,6 @@ export function MultipleContainers({
               isSorting: false,
               isDragOverlay: false,
             })}
-            color={getColor(item)}
             wrapperStyle={wrapperStyle({index})}
             renderItem={renderItem}
           />
@@ -588,21 +654,6 @@ export function MultipleContainers({
 
     return String.fromCharCode(lastContainerId.charCodeAt(0) + 1);
   }
-}
-
-function getColor(id: string) {
-  switch (id[0]) {
-    case 'A':
-      return '#7193f1';
-    case 'B':
-      return '#ffda6c';
-    case 'C':
-      return '#00bcd4';
-    case 'D':
-      return '#ef769f';
-  }
-
-  return undefined;
 }
 
 function Trash({id}: {id: UniqueIdentifier}) {
@@ -688,7 +739,6 @@ function SortableItem({
         overIndex: over ? getIndex(over.id) : overIndex,
         containerId,
       })}
-      color={getColor(id)}
       transition={transition}
       transform={transform}
       fadeIn={mountedWhileDragging}

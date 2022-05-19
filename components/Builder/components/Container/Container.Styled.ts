@@ -1,6 +1,6 @@
 import styled, { css } from 'styled-components'
 
-export const StyledContainer = styled.h1<{    
+export const StyledContainer = styled.div<{    
     hover: boolean | undefined;
     isPlaceholder: boolean | undefined;
     isScrollable: boolean | undefined;
