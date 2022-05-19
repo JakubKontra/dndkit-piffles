@@ -418,8 +418,10 @@ export function MultipleContainers({
                 (item) => item.id !== active.id
               )
              */
-            
+              
+
             if (activeContainer === FILTER_ID) {
+              console.log("overContainer", overContainer)
               return {
                 ...items,
                 [activeContainer]: {
@@ -723,13 +725,17 @@ export function MultipleContainers({
   }
 
   function handleAddColumn() {
-    const newContainerId = getNextContainerId();
+    const newContainerId = uuidv4();
 
     unstable_batchedUpdates(() => {
       setContainers((containers) => [...containers, newContainerId]);
       setItems((items) => ({
         ...items,
-        [newContainerId]: [],
+        [newContainerId]: {
+          id: newContainerId,
+          title: newContainerId,
+          items: []
+        },
       }));
     });
   }
