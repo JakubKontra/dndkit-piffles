@@ -53,7 +53,7 @@ function DroppableContainer({
 }: ContainerProps & {
   disabled?: boolean;
   id: string;
-  items: ContainerItem[];
+  items: ContainerItem[] | [];
   style?: React.CSSProperties;
 }) {
   const {
@@ -73,10 +73,9 @@ function DroppableContainer({
     },
     animateLayoutChanges,
   });
+
   const isOverContainer = over
-    ? (id === over.id && active?.data.current?.type !== 'container') ||
-      items.includes(over.id)
-    : false;
+    ? (id === over.id && active?.data.current?.type !== 'container') || items.find((item) => item.id === over.id) ? true : false : false;
 
   return (
     <Container
@@ -138,7 +137,6 @@ interface Props {
 const FILTER_ID = 'container_items';
 export const TRASH_ID = 'void';
 const PLACEHOLDER_ID = 'placeholder';
-const empty: UniqueIdentifier[] = [];
 
 export function MultipleContainers({
   adjustScale = false,
@@ -338,9 +336,8 @@ export function MultipleContainers({
         }
 
 
-        console.log("activeContaineractiveContainer", activeContainer)
-        console.log("overContaineroverContainer", overContainer)
-        if (activeContainer !== overContainer && activeContainer === FILTER_ID) {
+        // FIXME
+        if (activeContainer !== overContainer || activeContainer !== overContainer && activeContainer === FILTER_ID) {
           setItems((items) => {
             const activeItems = items[activeContainer].items;
             const overItems = items[overContainer].items;
@@ -419,23 +416,6 @@ export function MultipleContainers({
 
         if (!overId) {
           setActiveId(null);
-          return;
-        }
-
-        if (overId === PLACEHOLDER_ID) {
-          const newContainerId = getNextContainerId();
-
-          unstable_batchedUpdates(() => {
-            setContainers((containers) => [...containers, newContainerId]);
-            setItems((items) => ({
-              ...items,
-              [activeContainer]: items[activeContainer].filter(
-                (id) => id !== activeId
-              ),
-              [newContainerId]: [active.id],
-            }));
-            setActiveId(null);
-          });
           return;
         }
 
@@ -547,7 +527,6 @@ export function MultipleContainers({
                       style={containerStyle}
                       onRemove={() => handleRemove(containerId)}
                     >
-                      {console.log(items)}
                       <SortableContext items={items[containerId].items.map((item) => {
                         console.log(item)
                         console.log(containerId)
@@ -579,7 +558,7 @@ export function MultipleContainers({
                 <DroppableContainer
                   id={PLACEHOLDER_ID}
                   disabled={isSortingContainer}
-                  items={empty}
+                  items={[]}
                   onClick={handleAddColumn}
                   placeholder
                 >
@@ -591,7 +570,7 @@ export function MultipleContainers({
             <DroppableContainer
               id={FILTER_ID}
               disabled={isSortingContainer}
-              items={empty}
+              items={items[FILTER_ID].items}
             >
               <SortableContext items={items[FILTER_ID].items.map((item)=> item.id)} strategy={strategy}>
                   {items[FILTER_ID].items.map((item, index) => {
@@ -665,16 +644,16 @@ export function MultipleContainers({
         }}
         shadow
       >
-        {items[containerId].map((item, index) => (
+        {items[containerId].items.map((item, index) => (
           <Item
-            key={item}
-            value={item}
+            key={item.id}
+            value={item.id}
             handle={handle}
             style={getItemStyles({
               containerId,
               overIndex: -1,
-              index: getIndex(item),
-              value: item,
+              index: getIndex(item.id),
+              value: item.id,
               isDragging: false,
               isSorting: false,
               isDragOverlay: false,
@@ -707,13 +686,6 @@ export function MultipleContainers({
         },
       }));
     });
-  }
-
-  function getNextContainerId() {
-    const containerIds = Object.keys(items);
-    const lastContainerId = containerIds[containerIds.length - 1];
-
-    return String.fromCharCode(lastContainerId.charCodeAt(0) + 1);
   }
 }
 
