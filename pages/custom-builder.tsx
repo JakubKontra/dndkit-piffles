@@ -1,12 +1,11 @@
 import type { NextPage } from 'next'
-import { Builder } from '../components/Builder/Builder'
+import { CustomBuilder } from '../components/CustomBuilder/Builder'
 import { hashedItems } from '../data/data'
 
 const Home: NextPage = () => {
-  console.log(hashedItems)
   return (
     <div>
-    <Builder />
+      <CustomBuilder items={hashedItems} />
     </div>
   )
 }
