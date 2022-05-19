@@ -1,5 +1,7 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {createPortal, unstable_batchedUpdates} from 'react-dom';
+import { v4 as uuidv4 } from 'uuid';
+
 import {
   CancelDrop,
   closestCenter,
@@ -335,7 +337,6 @@ export function MultipleContainers({
           return;
         }
 
-
         // RIGHT COLUMN TO LEFT --- after new item in left column create new key / id
         if (activeContainer === FILTER_ID && overContainer !== FILTER_ID) {
           setItems((items) => {
@@ -375,7 +376,7 @@ export function MultipleContainers({
                 ...items[overContainer],
                 items: [
                   ...items[overContainer].items.slice(0, newIndex),
-                  items[activeContainer].items[activeIndex],
+                  { ...items[activeContainer].items[activeIndex], id: uuidv4() },
                   ...items[overContainer].items.slice(
                     newIndex,
                     items[overContainer].items.length
@@ -386,7 +387,7 @@ export function MultipleContainers({
           });
         }
 
-        if (activeContainer !== overContainer && activeContainer !== FILTER_ID && overContainer !== FILTER_ID) {
+        if (activeContainer !== overContainer) {
           setItems((items) => {
             const activeItems = items[activeContainer].items;
             const overItems = items[overContainer].items;
@@ -412,26 +413,55 @@ export function MultipleContainers({
 
             recentlyMovedToNewContainer.current = true;
 
-            return {
-              ...items,
-              [activeContainer]: {
-                ...items[activeContainer],
-                items: [
-                  ...items[activeContainer].items.filter(
-                    (item) => item.id !== active.id
-                  )
-                ]
-              },
-              [overContainer]: {
-                ...items[overContainer],
-                items: [...items[overContainer].items.slice(0, newIndex),
-                items[activeContainer].items[activeIndex],
-                ...items[overContainer].items.slice(
-                  newIndex,
-                  items[overContainer].items.length
-                ),]
-              },
-            };
+            /*
+              ...(activeContainer === FILTER_ID ? items[activeContainer].items : items[activeContainer].items.filter(
+                (item) => item.id !== active.id
+              )
+             */
+            
+            if (activeContainer === FILTER_ID) {
+              return {
+                ...items,
+                [activeContainer]: {
+                  ...items[activeContainer],
+                  items: [
+                    ...items[activeContainer].items.filter(
+                      (item) => item.id !== active.id
+                    )
+                  ]
+                },
+                [overContainer]: {
+                  ...items[overContainer],
+                  items: [...items[overContainer].items.slice(0, newIndex),
+                  items[activeContainer].items[activeIndex],
+                  ...items[overContainer].items.slice(
+                    newIndex,
+                    items[overContainer].items.length
+                  ),]
+                },
+              }; 
+            } else {
+              return {
+                ...items,
+                [activeContainer]: {
+                  ...items[activeContainer],
+                  items: [
+                    ...items[activeContainer].items.filter(
+                      (item) => item.id !== active.id
+                    )
+                  ]
+                },
+                [overContainer]: {
+                  ...items[overContainer],
+                  items: [...items[overContainer].items.slice(0, newIndex),
+                  items[activeContainer].items[activeIndex],
+                  ...items[overContainer].items.slice(
+                    newIndex,
+                    items[overContainer].items.length
+                  ),]
+                },
+              };
+            }
           });
         }
       }}
@@ -444,6 +474,7 @@ export function MultipleContainers({
             return arrayMove(containers, activeIndex, overIndex);
           });
         }
+        
 
         const activeContainer = findContainer(active.id);
 

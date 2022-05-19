@@ -28,7 +28,7 @@ const container2 = {
     title: `Container: 2`,
     items: [
         { id: 'item-2', code: 'XY-12' } as ContainerItem,
-        { id: 'item-3', code: 'XY-12' } as ContainerItem,
+        { id: 'item-3', code: 'XY-13' } as ContainerItem,
     ]
 } as Container
 
@@ -36,9 +36,9 @@ const container3 = {
     id: 'container-3',
     title: `Container: 3`,
     items: [
-        { id: 'item-4', code: uuidv4() } as ContainerItem,
-        { id: 'item-5', code: uuidv4() } as ContainerItem,
-        { id: 'item-6', code: uuidv4() } as ContainerItem,
+        { id: 'item-4', code: 'XY-13' } as ContainerItem,
+        { id: 'item-5', code: 'XY-14' } as ContainerItem,
+        { id: 'item-6', code: 'XY-15' } as ContainerItem,
     ]
 } as Container
 
@@ -46,9 +46,9 @@ const container_items = {
     id: 'container_items',
     title: `Container Items`,
     items: [
-        { id: 'item-7', code: uuidv4() } as ContainerItem,
-        { id: 'item-8', code: uuidv4() } as ContainerItem,
-        { id: 'item-9', code: uuidv4() } as ContainerItem,
+        { id: 'item-7', code: 'XY-16' } as ContainerItem,
+        { id: 'item-8', code: 'XY-17' } as ContainerItem,
+        { id: 'item-9', code: 'XY-18' } as ContainerItem,
     ]
 } as Container
 
