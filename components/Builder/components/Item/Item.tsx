@@ -38,7 +38,7 @@ export interface Props {
     value: Props['value'];
   }): React.ReactElement;
 }
-
+// eslint-disable-next-line react/display-name
 export const Item = React.memo(
   React.forwardRef<HTMLLIElement, Props>(
     (

@@ -16,6 +16,7 @@ export interface Props {
   onRemove?(): void;
 }
 
+// eslint-disable-next-line react/display-name
 export const Container = forwardRef<HTMLDivElement, Props>(
   (
     {
