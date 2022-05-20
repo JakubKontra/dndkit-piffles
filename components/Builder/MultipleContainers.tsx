@@ -23,6 +23,7 @@ import {
   MeasuringStrategy,
   KeyboardCoordinateGetter,
   defaultDropAnimationSideEffects,
+  useDraggable,
 } from '@dnd-kit/core';
 import {
   AnimateLayoutChanges,
@@ -42,6 +43,56 @@ import { ContainerItem, Items } from 'data/data';
 
 const animateLayoutChanges: AnimateLayoutChanges = (args) =>
   args.isSorting || args.wasDragging ? defaultAnimateLayoutChanges(args) : true;
+
+  function DroppableContainer2({
+    children,
+    disabled,
+    id,
+    items,
+    style,
+    ...props
+  }: ContainerProps & {
+    disabled?: boolean;
+    id: string;
+    items: ContainerItem[] | [];
+    style?: React.CSSProperties;
+  }) {
+    const {
+      attributes,
+      isDragging,
+      listeners,
+      setNodeRef,
+      transition,
+      transform,
+    } = useSortable({
+      id,
+      data: {
+        type: 'container',
+        children: items,
+      },
+      animateLayoutChanges,
+    });
+  
+    return (
+      <Container
+        ref={disabled ? undefined : setNodeRef}
+        style={{
+          ...style,
+          transition,
+          transform: CSS.Translate.toString(transform),
+          opacity: isDragging ? 0.5 : undefined,
+        }}
+        hover={false}
+        handleProps={{
+          ...attributes,
+          ...listeners,
+        }}
+        {...props}
+      >
+        {children}
+      </Container>
+    );
+  }
 
 function DroppableContainer({
   children,
@@ -327,6 +378,8 @@ export function MultipleContainers({
         if (!overId || overId === TRASH_ID || active.id in items) {
           return;
         }
+        
+      const activeData = active.data.current;
 
         const overContainer = findContainer(overId);
         const activeContainer = findContainer(active.id);
@@ -334,10 +387,62 @@ export function MultipleContainers({
         if (!overContainer || !activeContainer) {
           return;
         }
+        
+        if (activeContainer !== overContainer && activeData?.type === 'FilterItem') {
+          const activeItems = items[activeContainer].items;
+            const overItems = items[overContainer].items;
+            const overIndex = overItems.findIndex((item) => item.id === overId);
+            const activeIndex = activeItems.findIndex((item) => item.id === active.id);
+
+            let newIndex: number;
+
+            if (overId in items) {
+              newIndex = overItems.length + 1;
+            } else {
+              const isBelowOverItem =
+                over &&
+                active.rect.current.translated &&
+                active.rect.current.translated.top >
+                  over.rect.top + over.rect.height;
+
+              const modifier = isBelowOverItem ? 1 : 0;
+
+              newIndex =
+                overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
+            }
+
+            recentlyMovedToNewContainer.current = true;
+            
+          setItems((items) => {
+            return {
+              ...items,
+                [activeContainer]: {
+                  ...items[activeContainer],
+                  items: [
+                    ...items[activeContainer].items.filter(
+                      (item) => item.id !== active.id
+                    )
+                  ]
+                },
+                [overContainer]: {
+                  ...items[overContainer],
+                  items: [...items[overContainer].items.slice(0, newIndex),
+                  items[activeContainer].items[activeIndex],
+                  ...items[overContainer].items.slice(
+                    newIndex,
+                    items[overContainer].items.length
+                  ),]
+                },
+                [FILTER_ID]: {
+                  ...items[overContainer],
+                  items: (clonedItems && clonedItems ? clonedItems[FILTER_ID].items : [])
+                },
+            }
+          })
+        }
 
 
-        // FIXME
-        if (activeContainer !== overContainer || activeContainer !== overContainer && activeContainer === FILTER_ID) {
+        if (activeContainer !== overContainer && activeData?.type !== 'FilterItem') {
           setItems((items) => {
             const activeItems = items[activeContainer].items;
             const overItems = items[overContainer].items;
@@ -390,8 +495,14 @@ export function MultipleContainers({
                     items[overContainer].items.length
                   ),]
                 },
+                [FILTER_ID]: {
+                  ...items[overContainer],
+                  items: (clonedItems && clonedItems ? clonedItems[FILTER_ID].items : [])
+                },
               }; 
           });
+
+          console.log("clonedItems", clonedItems)
         }
       }}
       onDragEnd={({active, over}) => {
@@ -437,56 +548,6 @@ export function MultipleContainers({
                 ),
               },
             }))
-          }
-        
-        // RIGHT COLUMN TO LEFT --- after new item in left column create new key / id
-          if (overContainer === FILTER_ID) {
-              setItems((items) => {
-              const activeItems = items[activeContainer].items;
-              const overItems = items[overContainer].items;
-              const overIndex = overItems.findIndex((item) => item.id === overId);
-              const activeIndex = activeItems.findIndex((item) => item.id === active.id);
-
-              let newIndex: number;
-
-              if (overId in items) {
-                newIndex = overItems.length + 1;
-              } else {
-                const isBelowOverItem =
-                  over &&
-                  active.rect.current.translated &&
-                  active.rect.current.translated.top >
-                    over.rect.top + over.rect.height;
-
-                const modifier = isBelowOverItem ? 1 : 0;
-
-                newIndex =
-                  overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
-              }
-
-              recentlyMovedToNewContainer.current = true;
-
-              return {
-                ...items,
-                [activeContainer]: {
-                  ...items[activeContainer],
-                  items: [
-                    ...items[activeContainer].items
-                  ]
-                },
-                [overContainer]: {
-                  ...items[overContainer],
-                  items: [
-                    ...items[overContainer].items.slice(0, newIndex),
-                    { ...items[activeContainer].items[activeIndex], id: uuidv4() },
-                    ...items[overContainer].items.slice(
-                      newIndex,
-                      items[overContainer].items.length
-                    ),
-                  ]
-                },
-              };
-            });
           }
         }
 
@@ -567,15 +628,15 @@ export function MultipleContainers({
               )}
             </div>
             <div>
-            <DroppableContainer
+            <DroppableContainer2
               id={FILTER_ID}
               disabled={isSortingContainer}
               items={items[FILTER_ID].items}
+              key={new Date().toString()}
             >
-              <SortableContext items={items[FILTER_ID].items.map((item)=> item.id)} strategy={strategy}>
                   {items[FILTER_ID].items.map((item, index) => {
                     return (
-                      <SortableItem
+                      <DraggableItem
                         disabled={isSortingContainer}
                         key={`${item.id}-${index}`}
                         id={item.id}
@@ -589,8 +650,7 @@ export function MultipleContainers({
                       />
                     );
                   })}
-                </SortableContext>
-            </DroppableContainer>
+            </DroppableContainer2>
             </div>
           </div>
           
@@ -775,6 +835,52 @@ function SortableItem({
       transition={transition}
       transform={transform}
       fadeIn={mountedWhileDragging}
+      listeners={listeners}
+      renderItem={renderItem}
+    />
+  );
+}
+
+
+function DraggableItem({
+  disabled,
+  id,
+  index,
+  handle,
+  renderItem,
+  style,
+  containerId,
+  wrapperStyle,
+}: SortableItemProps) {
+  const {
+    setNodeRef,
+    listeners,
+    isDragging,
+  } = useDraggable({
+    id,
+    data: {
+      type: 'FilterItem'
+    }
+  });
+  // const mounted = useMountStatus();
+  // const mountedWhileDragging = isDragging && !mounted;
+
+  return (
+    <Item
+      ref={disabled ? undefined : setNodeRef}
+      value={id}
+      dragging={isDragging}
+      sorting={false}
+      handle={handle}
+      index={index}
+      wrapperStyle={wrapperStyle({index})}
+      style={style({
+        index,
+        value: id,
+        isDragging,
+        isSorting: false,
+        containerId,
+      })}
       listeners={listeners}
       renderItem={renderItem}
     />
