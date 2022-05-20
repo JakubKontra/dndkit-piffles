@@ -175,6 +175,7 @@ interface Props {
   }): React.CSSProperties;
   wrapperStyle?(args: {index: number}): React.CSSProperties;
   items: Items;
+  droppableItems: ContainerItem[];
   handle?: boolean;
   renderItem?: any;
   strategy?: SortingStrategy;
@@ -194,6 +195,7 @@ export function MultipleContainers({
   cancelDrop,
   handle = false,
   items: initialItems,
+  droppableItems: initialDroppableItems,
   containerStyle,
   coordinateGetter = multipleContainersCoordinateGetter,
   getItemStyles = () => ({}),
@@ -205,7 +207,8 @@ export function MultipleContainers({
   trashable = false,
   vertical = false,
   scrollable,
-}: Props) {
+}: Props) { 
+  const [droppableItems, setDroppableItems] = useState<ContainerItem[]>(() => initialDroppableItems);
   const [items, setItems] = useState<Items>(() => initialItems);
   const [containers, setContainers] = useState(Object.keys(items));
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -234,6 +237,9 @@ export function MultipleContainers({
         });
       }
 
+      // filter items
+
+
       // Start by finding any intersecting droppable
       const pointerIntersections = pointerWithin(args);
       const intersections =
@@ -244,25 +250,15 @@ export function MultipleContainers({
       let overId = getFirstCollision(intersections, 'id');
 
 
+      
       // ITEMS
       if (overId != null) {
-        if (overId === TRASH_ID) {
-          // If the intersecting droppable is the trash, return early
-          // Remove this if you're not using trashable functionality in your app
-          return intersections;
-        }
-
-        console.log("items-overId", overId)
-        console.log("items", items)
         if (overId in items) {
           const containerItems = items[overId].items;
 
           // If a container is matched and it contains items (columns 'A', 'B', 'C')
           if (containerItems.length > 0) {
             // Return the closest droppable within that container
-
-            console.log(args.droppableContainers)
-
             overId = closestCenter({
               ...args,
               droppableContainers: args.droppableContainers.filter(
@@ -302,6 +298,7 @@ export function MultipleContainers({
     })
   );
   const findContainer = (id: string) => {
+    console.log("xy-findCOntainer", id)
     /**
      if (id in items) {
       return id;
@@ -309,6 +306,10 @@ export function MultipleContainers({
     
     return Object.keys(items).find((key) => items[key].includes(id));
      */
+
+    if(droppableItems.findIndex((item) => item.id === id) !== -1) {
+      return id
+    }
 
     if (id in items) {
       return id
@@ -369,6 +370,7 @@ export function MultipleContainers({
         },
       }}
       onDragStart={({active}) => {
+        console.log("filter-active", active)
         setActiveId(active.id);
         setClonedItems(items);
       }}
@@ -380,69 +382,25 @@ export function MultipleContainers({
         }
         
       const activeData = active.data.current;
+      const overData = over.data.current;
 
         const overContainer = findContainer(overId);
         const activeContainer = findContainer(active.id);
 
+
+        console.log('xy-activeContainer',activeContainer)
+        console.log('xy-overContainer',overContainer)
         if (!overContainer || !activeContainer) {
           return;
         }
         
-        if (activeContainer !== overContainer && activeData?.type === 'FilterItem') {
-          const activeItems = items[activeContainer].items;
-            const overItems = items[overContainer].items;
-            const overIndex = overItems.findIndex((item) => item.id === overId);
-            const activeIndex = activeItems.findIndex((item) => item.id === active.id);
+        console.log("filter-activeData", activeData)
+        console.log("filter-overData", overData)
+        console.log("filter-activeContainer", activeContainer)
+        console.log("filter-overContainer", overContainer)
 
-            let newIndex: number;
-
-            if (overId in items) {
-              newIndex = overItems.length + 1;
-            } else {
-              const isBelowOverItem =
-                over &&
-                active.rect.current.translated &&
-                active.rect.current.translated.top >
-                  over.rect.top + over.rect.height;
-
-              const modifier = isBelowOverItem ? 1 : 0;
-
-              newIndex =
-                overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
-            }
-
-            recentlyMovedToNewContainer.current = true;
-            
-          setItems((items) => {
-            return {
-              ...items,
-                [activeContainer]: {
-                  ...items[activeContainer],
-                  items: [
-                    ...items[activeContainer].items.filter(
-                      (item) => item.id !== active.id
-                    )
-                  ]
-                },
-                [overContainer]: {
-                  ...items[overContainer],
-                  items: [...items[overContainer].items.slice(0, newIndex),
-                  items[activeContainer].items[activeIndex],
-                  ...items[overContainer].items.slice(
-                    newIndex,
-                    items[overContainer].items.length
-                  ),]
-                },
-                [FILTER_ID]: {
-                  ...items[overContainer],
-                  items: (clonedItems && clonedItems ? clonedItems[FILTER_ID].items : [])
-                },
-            }
-          })
-        }
-
-
-        if (activeContainer !== overContainer && activeData?.type !== 'FilterItem') {
+        
+        if (activeContainer !== overContainer) {
           setItems((items) => {
             const activeItems = items[activeContainer].items;
             const overItems = items[overContainer].items;
@@ -465,17 +423,14 @@ export function MultipleContainers({
               newIndex =
                 overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
             }
+                
+            console.log("xy-", droppableItems)
+            console.log("xy-newItem", items[activeContainer].items[activeIndex])
 
             recentlyMovedToNewContainer.current = true;
 
-            /*
-              ...(activeContainer === FILTER_ID ? items[activeContainer].items : items[activeContainer].items.filter(
-                (item) => item.id !== active.id
-              )
-             */
-              
 
-              console.log("overContainer", overContainer)
+              const newItem = items[activeContainer].items[activeIndex]
               return {
                 ...items,
                 [activeContainer]: {
@@ -489,20 +444,15 @@ export function MultipleContainers({
                 [overContainer]: {
                   ...items[overContainer],
                   items: [...items[overContainer].items.slice(0, newIndex),
-                  items[activeContainer].items[activeIndex],
+                  newItem,
                   ...items[overContainer].items.slice(
                     newIndex,
                     items[overContainer].items.length
                   ),]
-                },
-                [FILTER_ID]: {
-                  ...items[overContainer],
-                  items: (clonedItems && clonedItems ? clonedItems[FILTER_ID].items : [])
-                },
+                }
               }; 
           });
 
-          console.log("clonedItems", clonedItems)
         }
       }}
       onDragEnd={({active, over}) => {
@@ -567,7 +517,7 @@ export function MultipleContainers({
         <div
         >
         <SortableContext
-          items={[...containers, PLACEHOLDER_ID, FILTER_ID]}
+          items={[...containers]}
           strategy={
             vertical
               ? verticalListSortingStrategy
@@ -577,7 +527,6 @@ export function MultipleContainers({
           <div style={{ display: 'flex'}}>
             <div>
               {containers.map((containerId) => {
-                if(containerId !== FILTER_ID) {
                   return (
                     <DroppableContainer
                       key={containerId}
@@ -589,9 +538,6 @@ export function MultipleContainers({
                       onRemove={() => handleRemove(containerId)}
                     >
                       <SortableContext items={items[containerId].items.map((item) => {
-                        console.log(item)
-                        console.log(containerId)
-                        console.log(items[containerId].items)
                         return item.id
                       })} strategy={strategy}>
                         {items[containerId].items.map((value, index) => {
@@ -613,7 +559,6 @@ export function MultipleContainers({
                       </SortableContext>
                     </DroppableContainer>
                   )
-                }
               })}
               {minimal ? undefined : (
                 <DroppableContainer
@@ -629,12 +574,12 @@ export function MultipleContainers({
             </div>
             <div>
             <DroppableContainer2
+              scrollable={true}
               id={FILTER_ID}
-              disabled={isSortingContainer}
-              items={items[FILTER_ID].items}
-              key={new Date().toString()}
+              disabled={true}
+              items={droppableItems}
             >
-                  {items[FILTER_ID].items.map((item, index) => {
+                  {droppableItems.map((item, index) => {
                     return (
                       <DraggableItem
                         disabled={isSortingContainer}
@@ -653,6 +598,8 @@ export function MultipleContainers({
             </DroppableContainer2>
             </div>
           </div>
+          
+         
         </SortableContext>
         </div>
       </div>
@@ -809,6 +756,9 @@ function SortableItem({
     transition,
   } = useSortable({
     id,
+    data: {
+      type: 'FilterItem'
+    }
   });
   const mounted = useMountStatus();
   const mountedWhileDragging = isDragging && !mounted;

@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 
 export type Items = Record<string, Container>
 
@@ -39,22 +40,30 @@ const container3 = {
     ]
 } as Container
 
-const container_items = {
-    id: 'container_items',
-    title: `Container Items`,
-    items: [
-        { id: 'item-7', code: 'XY-16' } as ContainerItem,
-        { id: 'item-8', code: 'XY-17' } as ContainerItem,
-        { id: 'item-9', code: 'XY-18' } as ContainerItem,
-    ]
-} as Container
+export const container_items = [
+    { id: 'item-7', code: 'XY-16' } as ContainerItem,
+    { id: 'item-8', code: 'XY-17' } as ContainerItem,
+    { id: 'item-10', code: 'XY-18' } as ContainerItem,
+    { id: 'item-11', code: 'XY-19' } as ContainerItem,
+    { id: 'item-12', code: 'XY-20' } as ContainerItem,
+    { id: 'item-13', code: 'XY-21' } as ContainerItem,
+    { id: 'item-14', code: 'XY-22' } as ContainerItem,
+    { id: 'item-15', code: 'XY-23' } as ContainerItem
+] as ContainerItem[]
+
+const createContainerDraggableItem = (uuid: string, code: string) => {
+    return {
+        id: uuid,
+        code: code
+    }
+}
 
 const containers = [
     container1,
     container2,
-    container3,
-    container_items
+    container3
 ]
+
 
 const hashObject: Items = containers.reduce((acc, current) => {
   //@ts-ignore
