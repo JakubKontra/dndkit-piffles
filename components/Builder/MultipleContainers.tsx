@@ -298,7 +298,6 @@ export function MultipleContainers({
     })
   );
   const findContainer = (id: string) => {
-    console.log("xy-findCOntainer", id)
     /**
      if (id in items) {
       return id;
@@ -306,10 +305,6 @@ export function MultipleContainers({
     
     return Object.keys(items).find((key) => items[key].includes(id));
      */
-
-    if(droppableItems.findIndex((item) => item.id === id) !== -1) {
-      return id
-    }
 
     if (id in items) {
       return id
@@ -387,9 +382,6 @@ export function MultipleContainers({
         const overContainer = findContainer(overId);
         const activeContainer = findContainer(active.id);
 
-
-        console.log('xy-activeContainer',activeContainer)
-        console.log('xy-overContainer',overContainer)
         if (!overContainer || !activeContainer) {
           return;
         }
@@ -400,7 +392,8 @@ export function MultipleContainers({
         console.log("filter-overContainer", overContainer)
 
         
-        if (activeContainer !== overContainer) {
+
+        if (activeContainer !== overContainer ) {
           setItems((items) => {
             const activeItems = items[activeContainer].items;
             const overItems = items[overContainer].items;
