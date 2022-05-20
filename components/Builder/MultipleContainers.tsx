@@ -653,8 +653,6 @@ export function MultipleContainers({
             </DroppableContainer2>
             </div>
           </div>
-          
-         
         </SortableContext>
         </div>
       </div>
